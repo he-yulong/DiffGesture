@@ -13,7 +13,6 @@ from torch.utils.data.dataloader import default_collate
 import utils.data_utils_expressive
 from model.vocab import Vocab
 from data_loader.data_preprocessor_expressive import DataPreprocessor
-import pyarrow
 import copy
 
 
@@ -107,7 +106,7 @@ class SpeechMotionDataset(Dataset):
             key = '{:010}'.format(idx).encode('ascii')
             sample = txn.get(key)
 
-            sample = pyarrow.deserialize(sample)
+            sample = pickle.loads(sample)
             word_seq, pose_seq, vec_seq, audio, spectrogram, aux_info = sample
 
         def extend_word_seq(lang, words, end_time=None):
@@ -179,7 +178,7 @@ class SpeechMotionDataset(Dataset):
         txn = lmdb_env.begin(write=False)
         cursor = txn.cursor()
         for key, value in cursor:
-            video = pyarrow.deserialize(value)
+            video = pickle.loads(value)
             vid = video['vid']
             speaker_model.index_word(vid)
 

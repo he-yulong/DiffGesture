@@ -24,7 +24,7 @@ def migrate(src_dir, map_size=2 * 1024 ** 3):
             obj = pyarrow.deserialize(value)
             # re-encode with pickle
             txn_dst.put(key, pickle.dumps(obj))
-    print("Migration finished. New LMDB saved at data/ted_dataset/lmdb_val_pickle")
+    print("Migration finished.")
 
     env = lmdb.open(pickle_dir, readonly=True, lock=False)
     with env.begin() as txn:
@@ -37,6 +37,8 @@ def migrate(src_dir, map_size=2 * 1024 ** 3):
 
 
 if __name__ == "__main__":
-    migrate("data/ted_dataset/lmdb_val", map_size=2 * 1024 ** 3)
-    migrate("data/ted_dataset/lmdb_test", map_size=2 * 1024 ** 3)
-    migrate("data/ted_dataset/lmdb_train", map_size=16 * 1024 ** 3)
+    # migrate("data/ted_dataset/lmdb_val", map_size=2 * 1024 ** 3)
+    # migrate("data/ted_dataset/lmdb_test", map_size=2 * 1024 ** 3)
+    # migrate("data/ted_dataset/lmdb_train", map_size=16 * 1024 ** 3)
+    migrate("data/ted_expressive_dataset/val", map_size=2 * 1024 ** 3)
+

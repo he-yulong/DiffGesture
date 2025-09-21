@@ -20,7 +20,8 @@ from data_loader.data_preprocessor import DataPreprocessor
 from data_loader.lmdb_data_loader_expressive import SpeechMotionDataset, default_collate_fn
 from model.embedding_space_evaluator import EmbeddingSpaceEvaluator
 from utils.average_meter import AverageMeter
-from utils.data_utils_expressive import convert_dir_vec_to_pose, convert_pose_seq_to_dir_vec, resample_pose_seq, dir_vec_pairs
+from utils.data_utils_expressive import convert_dir_vec_to_pose, convert_pose_seq_to_dir_vec, resample_pose_seq, \
+    dir_vec_pairs
 from utils.train_utils import set_logger, set_random_seed
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -70,20 +71,28 @@ angle_pair = [
     (21, 43)
 ]
 
-change_angle = [0.0027804733254015446, 0.002761547453701496, 0.005953566171228886, 0.013764726929366589, 
-    0.022748252376914024, 0.039307352155447006, 0.03733552247285843, 0.03775784373283386, 0.0485558956861496, 
-    0.032914578914642334, 0.03800227493047714, 0.03757007420063019, 0.027338404208421707, 0.01640886254608631, 
-    0.003166505601257086, 0.0017252820543944836, 0.0018696568440645933, 0.0016072227153927088, 0.005681346170604229, 
-    0.013287615962326527, 0.021516695618629456, 0.033936675637960434, 0.03094293735921383, 0.03378918394446373, 
-    0.044323261827230453, 0.034706637263298035, 0.03369896858930588, 0.03573163226246834, 0.02628341130912304, 
-    0.014071882702410221, 0.0029828345868736506, 0.0015706412959843874, 0.0017107439925894141, 0.0014634154504165053, 
-    0.004873405676335096, 0.002998138777911663, 0.0030240598134696484, 0.0009890805231407285, 0.0012279648799449205, 
-    0.047324635088443756, 0.04472292214632034]
+change_angle = [0.0027804733254015446, 0.002761547453701496, 0.005953566171228886, 0.013764726929366589,
+                0.022748252376914024, 0.039307352155447006, 0.03733552247285843, 0.03775784373283386,
+                0.0485558956861496,
+                0.032914578914642334, 0.03800227493047714, 0.03757007420063019, 0.027338404208421707,
+                0.01640886254608631,
+                0.003166505601257086, 0.0017252820543944836, 0.0018696568440645933, 0.0016072227153927088,
+                0.005681346170604229,
+                0.013287615962326527, 0.021516695618629456, 0.033936675637960434, 0.03094293735921383,
+                0.03378918394446373,
+                0.044323261827230453, 0.034706637263298035, 0.03369896858930588, 0.03573163226246834,
+                0.02628341130912304,
+                0.014071882702410221, 0.0029828345868736506, 0.0015706412959843874, 0.0017107439925894141,
+                0.0014634154504165053,
+                0.004873405676335096, 0.002998138777911663, 0.0030240598134696484, 0.0009890805231407285,
+                0.0012279648799449205,
+                0.047324635088443756, 0.04472292214632034]
 
 sigma = 0.1
 thres = 0.001
 
 from model.pose_diffusion import PoseDiffusion
+
 
 def load_checkpoint_and_model(checkpoint_path, _device='cpu'):
     print('loading checkpoint {}'.format(checkpoint_path))
@@ -101,6 +110,7 @@ def load_checkpoint_and_model(checkpoint_path, _device='cpu'):
     diffusion.load_state_dict(checkpoint['state_dict'])
 
     return args, diffusion, lang_model, speaker_model, pose_dim
+
 
 def generate_gestures(args, diffusion, lang_model, audio, words, pose_dim, audio_sr=16000,
                       seed_seq=None, fade_out=False):
@@ -192,7 +202,7 @@ def generate_gestures(args, diffusion, lang_model, audio, words, pose_dim, audio
         end_frame = start_frame + n_smooth * 2
         if len(out_dir_vec) < end_frame:
             out_dir_vec = np.pad(out_dir_vec, [(0, end_frame - len(out_dir_vec)), (0, 0)], mode='constant')
-        out_dir_vec[end_frame-n_smooth:] = np.zeros((len(args.mean_dir_vec)))  # fade out to mean poses
+        out_dir_vec[end_frame - n_smooth:] = np.zeros((len(args.mean_dir_vec)))  # fade out to mean poses
 
         # interpolation
         y = out_dir_vec[start_frame:end_frame]
@@ -211,7 +221,6 @@ def generate_gestures(args, diffusion, lang_model, audio, words, pose_dim, audio
 
 
 def evaluate_testset(test_data_loader, diffusion, embed_space_evaluator, args, pose_dim):
-
     if embed_space_evaluator:
         embed_space_evaluator.reset()
     # losses = AverageMeter('loss')
@@ -240,12 +249,12 @@ def evaluate_testset(test_data_loader, diffusion, embed_space_evaluator, args, p
                 out_dir_vec = diffusion.sample(pose_dim, pre_seq, in_audio)
 
             out_dir_vec_bc = out_dir_vec + torch.tensor(args.mean_dir_vec).squeeze(1).unsqueeze(0).unsqueeze(0).cuda()
-            left_palm = torch.cross(out_dir_vec_bc[:, :, 11 * 3 : 12 * 3], out_dir_vec_bc[:, :, 17 * 3 : 18 * 3], dim = 2)
-            right_palm = torch.cross(out_dir_vec_bc[:, :, 28 * 3 : 29 * 3], out_dir_vec_bc[:, :, 34 * 3 : 35 * 3], dim = 2)
-            beat_vec = torch.cat((out_dir_vec_bc, left_palm, right_palm), dim = 2)
-            beat_vec = F.normalize(beat_vec, dim = -1)
+            left_palm = torch.cross(out_dir_vec_bc[:, :, 11 * 3: 12 * 3], out_dir_vec_bc[:, :, 17 * 3: 18 * 3], dim=2)
+            right_palm = torch.cross(out_dir_vec_bc[:, :, 28 * 3: 29 * 3], out_dir_vec_bc[:, :, 34 * 3: 35 * 3], dim=2)
+            beat_vec = torch.cat((out_dir_vec_bc, left_palm, right_palm), dim=2)
+            beat_vec = F.normalize(beat_vec, dim=-1)
             all_vec = beat_vec.reshape(beat_vec.shape[0] * beat_vec.shape[1], -1, 3)
-            
+
             for idx, pair in enumerate(angle_pair):
                 vec1 = all_vec[:, pair[0]]
                 vec2 = all_vec[:, pair[1]]
@@ -254,16 +263,19 @@ def evaluate_testset(test_data_loader, diffusion, embed_space_evaluator, args, p
                 angle = torch.acos(inner_product) / math.pi
                 angle_time = angle.reshape(batch_size, -1)
                 if idx == 0:
-                    angle_diff = torch.abs(angle_time[:, 1:] - angle_time[:, :-1]) / change_angle[idx] / len(change_angle)
+                    angle_diff = torch.abs(angle_time[:, 1:] - angle_time[:, :-1]) / change_angle[idx] / len(
+                        change_angle)
                 else:
-                    angle_diff += torch.abs(angle_time[:, 1:] - angle_time[:, :-1]) / change_angle[idx] / len(change_angle)
-            angle_diff = torch.cat((torch.zeros(batch_size, 1).to(device), angle_diff), dim = -1)
-            
+                    angle_diff += torch.abs(angle_time[:, 1:] - angle_time[:, :-1]) / change_angle[idx] / len(
+                        change_angle)
+            angle_diff = torch.cat((torch.zeros(batch_size, 1).to(device), angle_diff), dim=-1)
+
             for b in range(batch_size):
                 motion_beat_time = []
                 for t in range(2, 33):
                     if (angle_diff[b][t] < angle_diff[b][t - 1] and angle_diff[b][t] < angle_diff[b][t + 1]):
-                        if (angle_diff[b][t - 1] - angle_diff[b][t] >= thres or angle_diff[b][t + 1] - angle_diff[b][t] >= thres):
+                        if (angle_diff[b][t - 1] - angle_diff[b][t] >= thres or angle_diff[b][t + 1] - angle_diff[b][
+                            t] >= thres):
                             motion_beat_time.append(float(t) / 15.0)
                 if (len(motion_beat_time) == 0):
                     continue
@@ -314,8 +326,8 @@ def evaluate_testset(test_data_loader, diffusion, embed_space_evaluator, args, p
 
     return ret_dict
 
-def evaluate_testset_save_video(test_data_loader, diffusion, args, lang_model, pose_dim):
 
+def evaluate_testset_save_video(test_data_loader, diffusion, args, lang_model, pose_dim):
     n_save = 5
 
     with torch.no_grad():
@@ -331,7 +343,8 @@ def evaluate_testset_save_video(test_data_loader, diffusion, args, lang_model, p
             in_spec = in_spec[select_index, :].unsqueeze(0).to(device)
             target_dir_vec = target_vec[select_index, :].unsqueeze(0).to(device)
 
-            pre_seq = target_dir_vec.new_zeros((target_dir_vec.shape[0], target_dir_vec.shape[1], target_dir_vec.shape[2] + 1))
+            pre_seq = target_dir_vec.new_zeros(
+                (target_dir_vec.shape[0], target_dir_vec.shape[1], target_dir_vec.shape[2] + 1))
             pre_seq[:, 0:args.n_pre_poses, :-1] = target_dir_vec[:, 0:args.n_pre_poses]
             pre_seq[:, 0:args.n_pre_poses, -1] = 1  # indicating bit for constraints
 
@@ -365,10 +378,12 @@ def evaluate_testset_save_video(test_data_loader, diffusion, args, lang_model, p
                 target_dir_vec, out_dir_vec, mean_data,
                 sentence, audio=audio_npy, aux_str=aux_str)
 
+
 import matplotlib.pyplot as plt
 from textwrap import wrap
 import matplotlib.animation as animation
 import subprocess
+
 
 def create_video_and_save(save_path, iter_idx, prefix, target, output, mean_data, title,
                           audio=None, aux_str=None, clipping_to_shortest_stream=False, delete_audio_file=True):
@@ -436,7 +451,7 @@ def create_video_and_save(save_path, iter_idx, prefix, target, output, mean_data
 
     # save video
     try:
-        video_path = '{}/temp_{}.mp4'.format(save_path,  iter_idx)
+        video_path = '{}/temp_{}.mp4'.format(save_path, iter_idx)
         ani.save(video_path, fps=15, dpi=80)  # dpi 150 for a higher resolution
         del ani
         plt.close(fig)
@@ -458,8 +473,8 @@ def create_video_and_save(save_path, iter_idx, prefix, target, output, mean_data
     print('done, took {:.1f} seconds'.format(time.time() - start))
     return output_poses, target_poses
 
-def main(mode, checkpoint_path):
 
+def main(mode, checkpoint_path):
     args, diffusion, lang_model, speaker_model, pose_dim = load_checkpoint_and_model(
         checkpoint_path, device)
 
@@ -504,15 +519,21 @@ def main(mode, checkpoint_path):
         embed_space_evaluator = EmbeddingSpaceEvaluator(args, eval_net_path, lang_model, device)
         val_dataset = load_dataset(val_data_path)
         data_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, collate_fn=collate_fn,
-                                 shuffle=False, drop_last=True, num_workers=args.loader_workers)
+                                 shuffle=False, drop_last=True,
+                                 # num_workers=args.loader_workers,
+                                 num_workers=0,  # TODO: quick fix
+                                 )
         val_dataset.set_lang_model(lang_model)
         evaluate_testset(data_loader, diffusion, embed_space_evaluator, args, pose_dim)
-    
+
     elif mode == 'short':
         val_data_path = 'data/ted_expressive_dataset/val'
         val_dataset = load_dataset(val_data_path)
         data_loader = DataLoader(dataset=val_dataset, batch_size=32, collate_fn=collate_fn,
-                                 shuffle=False, drop_last=True, num_workers=args.loader_workers)
+                                 shuffle=False, drop_last=True,
+                                 # num_workers=args.loader_workers,
+                                 num_workers=0,  # TODO: quick fix
+                                 )
         val_dataset.set_lang_model(lang_model)
         evaluate_testset_save_video(data_loader, diffusion, args, lang_model, pose_dim)
 
@@ -548,7 +569,7 @@ def main(mode, checkpoint_path):
                 clip_time = [clips[clip_idx]['start_time'], clips[clip_idx]['end_time']]
 
                 clip_poses = resample_pose_seq(clip_poses, clip_time[1] - clip_time[0],
-                                                                args.motion_resampling_framerate)
+                                               args.motion_resampling_framerate)
                 target_dir_vec = convert_pose_seq_to_dir_vec(clip_poses)
                 target_dir_vec = target_dir_vec.reshape(target_dir_vec.shape[0], -1)
                 target_dir_vec -= mean_dir_vec
@@ -563,7 +584,7 @@ def main(mode, checkpoint_path):
                     clip_words[selected_vi][1] -= clip_time[0]  # start time
                     clip_words[selected_vi][2] -= clip_time[0]  # end time
 
-                out_dir_vec = generate_gestures(args, diffusion, lang_model, clip_audio, clip_words, pose_dim, 
+                out_dir_vec = generate_gestures(args, diffusion, lang_model, clip_audio, clip_words, pose_dim,
                                                 seed_seq=target_dir_vec[0:args.n_pre_poses], fade_out=False)
 
                 # make a video

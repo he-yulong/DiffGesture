@@ -5,7 +5,7 @@ from collections import defaultdict
 import lmdb
 import math
 import numpy as np
-import pyarrow
+import pickle
 import tqdm
 from sklearn.preprocessing import normalize
 
@@ -31,8 +31,10 @@ class DataPreprocessor:
         self.audio_sample_length = int(self.n_poses / self.skeleton_resampling_fps * 16000)
 
         # create db for samples
-        map_size = 1024 * 200  # in MB
-        map_size <<= 20  # in B
+        if 'train' in out_lmdb_dir:
+            map_size = 20 * 1024 ** 3
+        else:
+            map_size = 8 * 1024 ** 3
         self.dst_lmdb_env = lmdb.open(out_lmdb_dir, map_size=map_size)
         self.n_out_samples = 0
 
@@ -43,7 +45,8 @@ class DataPreprocessor:
         # sampling and normalization
         cursor = src_txn.cursor()
         for key, value in cursor:
-            video = pyarrow.deserialize(value)
+            # video = pyarrow.deserialize(value)
+            video = pickle.loads(value)
             vid = video['vid']
             clips = video['clips']
             for clip_idx, clip in enumerate(clips):
@@ -160,7 +163,8 @@ class DataPreprocessor:
                     # save
                     k = '{:010}'.format(self.n_out_samples).encode('ascii')
                     v = [words, poses, normalized_dir_vec, audio, spectrogram, aux]
-                    v = pyarrow.serialize(v).to_buffer()
+                    # v = pyarrow.serialize(v).to_buffer()
+                    v = pickle.dumps(v)
                     txn.put(k, v)
                     self.n_out_samples += 1
 

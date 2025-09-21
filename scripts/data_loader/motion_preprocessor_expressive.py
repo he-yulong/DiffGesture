@@ -1,33 +1,11 @@
+# DiffGesture/scripts/data_loader/motion_preprocessor_expressive.py
 import numpy as np
+from .motion_precessor_base import MotionProcessorBase
 
 
-class MotionPreprocessor:
+class MotionPreprocessor(MotionProcessorBase):
     def __init__(self, skeletons, mean_pose):
-        self.skeletons = np.array(skeletons)
-        self.mean_pose = np.array(mean_pose).reshape(-1, 3)
-        self.filtering_message = "PASS"
-
-    def get(self):
-        assert (self.skeletons is not None)
-
-        # filtering
-        if self.skeletons != []:
-            if self.check_pose_diff():
-                self.skeletons = []
-                self.filtering_message = "pose"
-            elif self.check_spine_angle():
-                self.skeletons = []
-                self.filtering_message = "spine angle"
-            elif self.check_static_motion():
-                self.skeletons = []
-                self.filtering_message = "motion"
-
-        if self.skeletons != []:
-            self.skeletons = self.skeletons.tolist()
-            for i, frame in enumerate(self.skeletons):
-                assert not np.isnan(self.skeletons[i]).any()  # missing joints
-
-        return self.skeletons, self.filtering_message
+        super().__init__(skeletons, mean_pose)
 
     def check_static_motion(self, verbose=False):
         def get_variance(skeleton, joint_idx):
@@ -77,7 +55,7 @@ class MotionPreprocessor:
             angles.append(angle)
 
         if np.rad2deg(max(angles)) > 30 or np.rad2deg(np.mean(angles)) > 20:  # exclude 4495
-        # if np.rad2deg(max(angles)) > 20:  # exclude 8270
+            # if np.rad2deg(max(angles)) > 20:  # exclude 8270
             if verbose:
                 print('skip - check_spine_angle {:.5f}, {:.5f}'.format(max(angles), np.mean(angles)))
             return True
