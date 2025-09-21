@@ -1,3 +1,5 @@
+# DiffGesture/scripts/test_ted.py
+# Test a trained model on the TED dataset
 from torch.utils.data import DataLoader
 import datetime
 import librosa
@@ -38,6 +40,7 @@ thres = 0.03
 
 from model.pose_diffusion import PoseDiffusion
 
+
 def load_checkpoint_and_model(checkpoint_path, _device='cpu'):
     print('loading checkpoint {}'.format(checkpoint_path))
     checkpoint = torch.load(checkpoint_path, map_location=_device)
@@ -54,6 +57,7 @@ def load_checkpoint_and_model(checkpoint_path, _device='cpu'):
     diffusion.load_state_dict(checkpoint['state_dict'])
 
     return args, diffusion, lang_model, speaker_model, pose_dim
+
 
 def generate_gestures(args, diffusion, lang_model, audio, words, pose_dim, audio_sr=16000,
                       seed_seq=None, fade_out=False):
@@ -145,7 +149,7 @@ def generate_gestures(args, diffusion, lang_model, audio, words, pose_dim, audio
         end_frame = start_frame + n_smooth * 2
         if len(out_dir_vec) < end_frame:
             out_dir_vec = np.pad(out_dir_vec, [(0, end_frame - len(out_dir_vec)), (0, 0)], mode='constant')
-        out_dir_vec[end_frame-n_smooth:] = np.zeros((len(args.mean_dir_vec)))  # fade out to mean poses
+        out_dir_vec[end_frame - n_smooth:] = np.zeros((len(args.mean_dir_vec)))  # fade out to mean poses
 
         # interpolation
         y = out_dir_vec[start_frame:end_frame]
@@ -164,7 +168,6 @@ def generate_gestures(args, diffusion, lang_model, audio, words, pose_dim, audio
 
 
 def evaluate_testset(test_data_loader, diffusion, embed_space_evaluator, args, pose_dim):
-
     if embed_space_evaluator:
         embed_space_evaluator.reset()
     # losses = AverageMeter('loss')
@@ -195,9 +198,9 @@ def evaluate_testset(test_data_loader, diffusion, embed_space_evaluator, args, p
             out_dir_vec_bc = out_dir_vec + torch.tensor(args.mean_dir_vec).squeeze(1).unsqueeze(0).unsqueeze(0).cuda()
             beat_vec = out_dir_vec_bc.reshape(out_dir_vec.shape[0], out_dir_vec.shape[1], -1, 3)
 
-            beat_vec = F.normalize(beat_vec, dim = -1)
+            beat_vec = F.normalize(beat_vec, dim=-1)
             all_vec = beat_vec.reshape(beat_vec.shape[0] * beat_vec.shape[1], -1, 3)
-            
+
             for idx, pair in enumerate(angle_pair):
                 vec1 = all_vec[:, pair[0]]
                 vec2 = all_vec[:, pair[1]]
@@ -206,16 +209,19 @@ def evaluate_testset(test_data_loader, diffusion, embed_space_evaluator, args, p
                 angle = torch.acos(inner_product) / math.pi
                 angle_time = angle.reshape(batch_size, -1)
                 if idx == 0:
-                    angle_diff = torch.abs(angle_time[:, 1:] - angle_time[:, :-1]) / change_angle[idx] / len(change_angle)
+                    angle_diff = torch.abs(angle_time[:, 1:] - angle_time[:, :-1]) / change_angle[idx] / len(
+                        change_angle)
                 else:
-                    angle_diff += torch.abs(angle_time[:, 1:] - angle_time[:, :-1]) / change_angle[idx] / len(change_angle)
-            angle_diff = torch.cat((torch.zeros(batch_size, 1).to(device), angle_diff), dim = -1)
-            
+                    angle_diff += torch.abs(angle_time[:, 1:] - angle_time[:, :-1]) / change_angle[idx] / len(
+                        change_angle)
+            angle_diff = torch.cat((torch.zeros(batch_size, 1).to(device), angle_diff), dim=-1)
+
             for b in range(batch_size):
                 motion_beat_time = []
                 for t in range(2, 33):
                     if (angle_diff[b][t] < angle_diff[b][t - 1] and angle_diff[b][t] < angle_diff[b][t + 1]):
-                        if (angle_diff[b][t - 1] - angle_diff[b][t] >= thres or angle_diff[b][t + 1] - angle_diff[b][t] >= thres):
+                        if (angle_diff[b][t - 1] - angle_diff[b][t] >= thres or angle_diff[b][t + 1] - angle_diff[b][
+                            t] >= thres):
                             motion_beat_time.append(float(t) / 15.0)
                 if (len(motion_beat_time) == 0):
                     continue
@@ -266,8 +272,8 @@ def evaluate_testset(test_data_loader, diffusion, embed_space_evaluator, args, p
 
     return ret_dict
 
-def evaluate_testset_save_video(test_data_loader, diffusion, args, lang_model, pose_dim):
 
+def evaluate_testset_save_video(test_data_loader, diffusion, args, lang_model, pose_dim):
     n_save = 5
 
     with torch.no_grad():
@@ -283,7 +289,8 @@ def evaluate_testset_save_video(test_data_loader, diffusion, args, lang_model, p
             in_spec = in_spec[select_index, :].unsqueeze(0).to(device)
             target_dir_vec = target_vec[select_index, :].unsqueeze(0).to(device)
 
-            pre_seq = target_dir_vec.new_zeros((target_dir_vec.shape[0], target_dir_vec.shape[1], target_dir_vec.shape[2] + 1))
+            pre_seq = target_dir_vec.new_zeros(
+                (target_dir_vec.shape[0], target_dir_vec.shape[1], target_dir_vec.shape[2] + 1))
             pre_seq[:, 0:args.n_pre_poses, :-1] = target_dir_vec[:, 0:args.n_pre_poses]
             pre_seq[:, 0:args.n_pre_poses, -1] = 1  # indicating bit for constraints
 
@@ -317,10 +324,12 @@ def evaluate_testset_save_video(test_data_loader, diffusion, args, lang_model, p
                 target_dir_vec, out_dir_vec, mean_data,
                 sentence, audio=audio_npy, aux_str=aux_str)
 
+
 import matplotlib.pyplot as plt
 from textwrap import wrap
 import matplotlib.animation as animation
 import subprocess
+
 
 def create_video_and_save(save_path, iter_idx, prefix, target, output, mean_data, title,
                           audio=None, aux_str=None, clipping_to_shortest_stream=False, delete_audio_file=True):
@@ -388,7 +397,7 @@ def create_video_and_save(save_path, iter_idx, prefix, target, output, mean_data
 
     # save video
     try:
-        video_path = '{}/temp_{}.mp4'.format(save_path,  iter_idx)
+        video_path = '{}/temp_{}.mp4'.format(save_path, iter_idx)
         ani.save(video_path, fps=15, dpi=80)  # dpi 150 for a higher resolution
         del ani
         plt.close(fig)
@@ -410,8 +419,8 @@ def create_video_and_save(save_path, iter_idx, prefix, target, output, mean_data
     print('done, took {:.1f} seconds'.format(time.time() - start))
     return output_poses, target_poses
 
-def main(mode, checkpoint_path):
 
+def main(mode, checkpoint_path, val_data_path):
     args, diffusion, lang_model, speaker_model, pose_dim = load_checkpoint_and_model(
         checkpoint_path, device)
 
@@ -451,20 +460,24 @@ def main(mode, checkpoint_path):
         return dataset
 
     if mode == 'eval':
-        val_data_path = 'data/ted_dataset/lmdb_val'
         eval_net_path = 'output/train_h36m_gesture_autoencoder/gesture_autoencoder_checkpoint_best.bin'
         embed_space_evaluator = EmbeddingSpaceEvaluator(args, eval_net_path, lang_model, device)
         val_dataset = load_dataset(val_data_path)
         data_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, collate_fn=collate_fn,
-                                 shuffle=False, drop_last=True, num_workers=args.loader_workers)
+                                 shuffle=False, drop_last=True,
+                                 num_workers=0,  # quick fix
+                                 # num_workers=args.loader_workers,
+                                 )
         val_dataset.set_lang_model(lang_model)
         evaluate_testset(data_loader, diffusion, embed_space_evaluator, args, pose_dim)
-    
+
     elif mode == 'short':
-        val_data_path = 'data/ted_dataset/lmdb_val'
         val_dataset = load_dataset(val_data_path)
         data_loader = DataLoader(dataset=val_dataset, batch_size=32, collate_fn=collate_fn,
-                                 shuffle=False, drop_last=True, num_workers=args.loader_workers)
+                                 shuffle=False, drop_last=True,
+                                 num_workers=0,  # quick fix
+                                 # num_workers=args.loader_workers
+                                 )
         val_dataset.set_lang_model(lang_model)
         evaluate_testset_save_video(data_loader, diffusion, args, lang_model, pose_dim)
 
@@ -475,7 +488,7 @@ def main(mode, checkpoint_path):
 
         # load clips and make gestures
         n_saved = 0
-        lmdb_env = lmdb.open('data/ted_dataset/lmdb_val', readonly=True, lock=False)
+        lmdb_env = lmdb.open(val_data_path, readonly=True, lock=False)
 
         with lmdb_env.begin(write=False) as txn:
             keys = [key for key, _ in txn.cursor()]
@@ -500,7 +513,7 @@ def main(mode, checkpoint_path):
                 clip_time = [clips[clip_idx]['start_time'], clips[clip_idx]['end_time']]
 
                 clip_poses = resample_pose_seq(clip_poses, clip_time[1] - clip_time[0],
-                                                                args.motion_resampling_framerate)
+                                               args.motion_resampling_framerate)
                 target_dir_vec = convert_pose_seq_to_dir_vec(clip_poses)
                 target_dir_vec = target_dir_vec.reshape(target_dir_vec.shape[0], -1)
                 target_dir_vec -= mean_dir_vec
@@ -515,7 +528,7 @@ def main(mode, checkpoint_path):
                     clip_words[selected_vi][1] -= clip_time[0]  # start time
                     clip_words[selected_vi][2] -= clip_time[0]  # end time
 
-                out_dir_vec = generate_gestures(args, diffusion, lang_model, clip_audio, clip_words, pose_dim, 
+                out_dir_vec = generate_gestures(args, diffusion, lang_model, clip_audio, clip_words, pose_dim,
                                                 seed_seq=target_dir_vec[0:args.n_pre_poses], fade_out=False)
 
                 # make a video
@@ -534,9 +547,24 @@ def main(mode, checkpoint_path):
 
 
 if __name__ == '__main__':
-    mode = sys.argv[1]
-    assert mode in ["eval", "short", "long"]
+    import argparse
 
-    ckpt_path = 'output/train_diffusion_ted/pose_diffusion_checkpoint_499.bin'
+    parser = argparse.ArgumentParser(description="Test DiffGesture on TED dataset")
+    parser.add_argument(
+        "--mode", type=str, default="short",
+        choices=["eval", "short", "long"],
+        help="Evaluation mode (default: short)"
+    )
+    parser.add_argument(
+        "--ckpt", type=str,
+        default="./output/train_diffusion_ted/pose_diffusion_checkpoint_499.bin",
+        help="Path to model checkpoint"
+    )
+    parser.add_argument(
+        "--val_data", type=str,
+        default="data/ted_dataset/lmdb_val",
+        help="Path to validation dataset (LMDB)"
+    )
+    args = parser.parse_args()
 
-    main(mode, ckpt_path)
+    main(args.mode, args.ckpt, args.val_data)

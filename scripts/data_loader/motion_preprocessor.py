@@ -1,33 +1,40 @@
+# DiffGesture/scripts/data_loader/motion_preprocessor.py
 import numpy as np
 
 
 class MotionPreprocessor:
     def __init__(self, skeletons, mean_pose):
-        self.skeletons = np.array(skeletons)
-        self.mean_pose = np.array(mean_pose).reshape(-1, 3)
+        # Force everything to NumPy with consistent shape
+        self.skeletons = np.asarray(skeletons, dtype=np.float32)
+        self.mean_pose = np.asarray(mean_pose, dtype=np.float32).reshape(-1, 3)
         self.filtering_message = "PASS"
 
-    def get(self):
-        assert (self.skeletons is not None)
+    def get(self, as_list=True):
+        """Run filtering checks and return skeletons + message.
+
+        Args:
+            as_list (bool): If True, return skeletons as Python list.
+                            If False, return NumPy array.
+        """
+        if self.skeletons is None or self.skeletons.size == 0:
+            return [] if as_list else np.empty((0, *self.mean_pose.shape)), "empty_skeleton"
 
         # filtering
-        if self.skeletons != []:
-            if self.check_pose_diff():
-                self.skeletons = []
-                self.filtering_message = "pose"
-            elif self.check_spine_angle():
-                self.skeletons = []
-                self.filtering_message = "spine angle"
-            elif self.check_static_motion():
-                self.skeletons = []
-                self.filtering_message = "motion"
+        if self.check_pose_diff():
+            self.skeletons = np.empty((0, *self.mean_pose.shape))
+            self.filtering_message = "pose"
+        elif self.check_spine_angle():
+            self.skeletons = np.empty((0, *self.mean_pose.shape))
+            self.filtering_message = "spine angle"
+        elif self.check_static_motion():
+            self.skeletons = np.empty((0, *self.mean_pose.shape))
+            self.filtering_message = "motion"
 
-        if self.skeletons != []:
-            self.skeletons = self.skeletons.tolist()
-            for i, frame in enumerate(self.skeletons):
-                assert not np.isnan(self.skeletons[i]).any()  # missing joints
+        # sanity check for NaNs
+        if self.skeletons.size > 0:
+            assert not np.isnan(self.skeletons).any(), "NaN detected in skeletons"
 
-        return self.skeletons, self.filtering_message
+        return self.skeletons.tolist() if as_list else self.skeletons, self.filtering_message
 
     def check_static_motion(self, verbose=False):
         def get_variance(skeleton, joint_idx):

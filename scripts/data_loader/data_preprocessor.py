@@ -4,7 +4,7 @@ from collections import defaultdict
 import lmdb
 import math
 import numpy as np
-import pyarrow
+import pickle
 
 import utils.data_utils
 from data_loader.motion_preprocessor import MotionPreprocessor
@@ -40,7 +40,7 @@ class DataPreprocessor:
         # sampling and normalization
         cursor = src_txn.cursor()
         for key, value in cursor:
-            video = pyarrow.deserialize(value)
+            video = pickle.loads(value)
             vid = video['vid']
             clips = video['clips']
             for clip_idx, clip in enumerate(clips):
@@ -157,7 +157,7 @@ class DataPreprocessor:
                     # save
                     k = '{:010}'.format(self.n_out_samples).encode('ascii')
                     v = [words, poses, normalized_dir_vec, audio, spectrogram, aux]
-                    v = pyarrow.serialize(v).to_buffer()
+                    v = pickle.dumps(v)
                     txn.put(k, v)
                     self.n_out_samples += 1
 
