@@ -1,3 +1,4 @@
+# A2P/DiffGesture/scripts/migration_from_arrow.py
 import os
 import lmdb
 import pyarrow  # keep 0.14.0 & Python3.7 only for reading
@@ -40,5 +41,6 @@ if __name__ == "__main__":
     # migrate("data/ted_dataset/lmdb_val", map_size=2 * 1024 ** 3)
     # migrate("data/ted_dataset/lmdb_test", map_size=2 * 1024 ** 3)
     # migrate("data/ted_dataset/lmdb_train", map_size=16 * 1024 ** 3)
-    migrate("data/ted_expressive_dataset/val", map_size=2 * 1024 ** 3)
-
+    # migrate("data/ted_expressive_dataset/val", map_size=2 * 1024 ** 3)
+    # migrate("data/ted_expressive_dataset/train", map_size=18 * 1024 ** 3)
+    migrate("data/ted_expressive_dataset/test", map_size=1.8 * 1024 ** 3)

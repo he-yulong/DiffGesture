@@ -1,3 +1,4 @@
+# DiffGesture/scripts/data_loader/data_preprocessor_expressive.py
 """ create data samples """
 import logging
 from collections import defaultdict
@@ -6,7 +7,7 @@ import lmdb
 import math
 import numpy as np
 import pickle
-import tqdm
+from tqdm import tqdm
 from sklearn.preprocessing import normalize
 
 import utils.data_utils_expressive
@@ -32,7 +33,7 @@ class DataPreprocessor:
 
         # create db for samples
         if 'train' in out_lmdb_dir:
-            map_size = 20 * 1024 ** 3
+            map_size = 64 * 1024 ** 3
         else:
             map_size = 8 * 1024 ** 3
         self.dst_lmdb_env = lmdb.open(out_lmdb_dir, map_size=map_size)
@@ -42,10 +43,12 @@ class DataPreprocessor:
         n_filtered_out = defaultdict(int)
         src_txn = self.src_lmdb_env.begin(write=False)
 
+        # get number of items for tqdm total
+        n_entries = src_txn.stat()['entries']
+
         # sampling and normalization
         cursor = src_txn.cursor()
-        for key, value in cursor:
-            # video = pyarrow.deserialize(value)
+        for key, value in tqdm(cursor, total=n_entries, desc="Processing videos"):
             video = pickle.loads(value)
             vid = video['vid']
             clips = video['clips']

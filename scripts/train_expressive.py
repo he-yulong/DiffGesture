@@ -1,3 +1,4 @@
+# DiffGesture/scripts/train_expressive.py
 from pathlib import Path
 from torch import optim
 from torch.utils.data import DataLoader
@@ -131,7 +132,10 @@ def main(config):
                                         remove_word_timing=(args.input_context == 'text')
                                         )
     train_loader = DataLoader(dataset=train_dataset, batch_size=args.batch_size,
-                              shuffle=True, drop_last=True, num_workers=args.loader_workers, pin_memory=True,
+                              shuffle=True, drop_last=True,
+                              # num_workers=args.loader_workers,
+                              num_workers=0, # quick fix for Windows
+                              pin_memory=True,
                               collate_fn=collate_fn
                               )
 

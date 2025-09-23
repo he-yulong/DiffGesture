@@ -44,15 +44,20 @@ class MotionPreprocessor(MotionProcessorBase):
 
     def check_spine_angle(self, verbose=False):
         def angle_between(v1, v2):
-            v1_u = v1 / np.linalg.norm(v1)
-            v2_u = v2 / np.linalg.norm(v2)
+            norm1 = np.linalg.norm(v1)
+            norm2 = np.linalg.norm(v2)
+            if norm1 < 1e-8 or norm2 < 1e-8:  # too small, avoid division by zero
+                return 0.0  # or np.nan if you want to mark invalid
+            v1_u = v1 / norm1
+            v2_u = v2 / norm2
             return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
 
         angles = []
         for i in range(self.skeletons.shape[0]):
             spine_vec = self.skeletons[i, 1] - self.skeletons[i, 0]
             angle = angle_between(spine_vec, [0, -1, 0])
-            angles.append(angle)
+            if not np.isnan(angle):  # skip invalid cases
+                angles.append(angle)
 
         if np.rad2deg(max(angles)) > 30 or np.rad2deg(np.mean(angles)) > 20:  # exclude 4495
             # if np.rad2deg(max(angles)) > 20:  # exclude 8270
