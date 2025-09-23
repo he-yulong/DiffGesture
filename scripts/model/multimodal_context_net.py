@@ -1,9 +1,8 @@
 import torch
 import torch.nn as nn
 
-from model import vocab
-import model.embedding_net
-from model.tcn import TemporalConvNet
+from scripts.model import vocab
+from scripts.model.tcn import TemporalConvNet
 
 
 class WavEncoder(nn.Module):

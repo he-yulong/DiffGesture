@@ -6,8 +6,8 @@ import torch.nn.functional as F
 import umap
 from scipy import linalg
 
-from model.embedding_net import EmbeddingNet
-from model.motion_ae import MotionAE
+from scripts.model.embedding_net import EmbeddingNet
+from scripts.model.motion_ae import MotionAE
 
 import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)  # ignore warnings

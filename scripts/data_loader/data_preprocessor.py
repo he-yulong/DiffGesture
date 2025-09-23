@@ -5,6 +5,7 @@ import lmdb
 import math
 import numpy as np
 import pickle
+from tqdm import tqdm
 
 import utils.data_utils
 from data_loader.motion_preprocessor import MotionPreprocessor
@@ -24,12 +25,15 @@ class DataPreprocessor:
         with self.src_lmdb_env.begin() as txn:
             self.n_videos = txn.stat()['entries']
 
-        self.spectrogram_sample_length = utils.data_utils.calc_spectrogram_length_from_motion_length(self.n_poses, self.skeleton_resampling_fps)
+        self.spectrogram_sample_length = utils.data_utils.calc_spectrogram_length_from_motion_length(self.n_poses,
+                                                                                                     self.skeleton_resampling_fps)
         self.audio_sample_length = int(self.n_poses / self.skeleton_resampling_fps * 16000)
 
         # create db for samples
-        map_size = 1024 * 50  # in MB
-        map_size <<= 20  # in B
+        if 'train' in out_lmdb_dir:
+            map_size = 16 * 1024 ** 3
+        else:
+            map_size = 4 * 1024 ** 3
         self.dst_lmdb_env = lmdb.open(out_lmdb_dir, map_size=map_size)
         self.n_out_samples = 0
 
@@ -37,9 +41,12 @@ class DataPreprocessor:
         n_filtered_out = defaultdict(int)
         src_txn = self.src_lmdb_env.begin(write=False)
 
+        # get number of items for tqdm total
+        n_entries = src_txn.stat()['entries']
+
         # sampling and normalization
         cursor = src_txn.cursor()
-        for key, value in cursor:
+        for key, value in tqdm(cursor, total=n_entries, desc="Processing videos in DataPreprocessor"):
             video = pickle.loads(value)
             vid = video['vid']
             clips = video['clips']
@@ -74,7 +81,8 @@ class DataPreprocessor:
         n_filtered_out = defaultdict(int)
 
         # skeleton resampling
-        clip_skeleton = utils.data_utils.resample_pose_seq(clip_skeleton, clip_e_t - clip_s_t, self.skeleton_resampling_fps)
+        clip_skeleton = utils.data_utils.resample_pose_seq(clip_skeleton, clip_e_t - clip_s_t,
+                                                           self.skeleton_resampling_fps)
 
         # divide
         aux_info = []
@@ -86,7 +94,8 @@ class DataPreprocessor:
         num_subdivision = math.floor(
             (len(clip_skeleton) - self.n_poses)
             / self.subdivision_stride) + 1  # floor((K - (N+M)) / S) + 1
-        expected_audio_length = utils.data_utils.calc_spectrogram_length_from_motion_length(len(clip_skeleton), self.skeleton_resampling_fps)
+        expected_audio_length = utils.data_utils.calc_spectrogram_length_from_motion_length(len(clip_skeleton),
+                                                                                            self.skeleton_resampling_fps)
         assert abs(expected_audio_length - clip_audio.shape[1]) <= 5, 'audio and skeleton lengths are different'
 
         for i in range(num_subdivision):

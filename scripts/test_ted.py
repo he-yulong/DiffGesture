@@ -8,12 +8,9 @@ import logging
 import math
 import numpy as np
 import os
-import pickle
-import pprint
 import pyarrow
 import random
 import soundfile as sf
-import sys
 import time
 import torch
 import torch.nn.functional as F
@@ -23,7 +20,8 @@ from data_loader.lmdb_data_loader import SpeechMotionDataset, default_collate_fn
 from model.embedding_space_evaluator import EmbeddingSpaceEvaluator
 from utils.average_meter import AverageMeter
 from utils.data_utils import convert_dir_vec_to_pose, convert_pose_seq_to_dir_vec, resample_pose_seq, dir_vec_pairs
-from utils.train_utils import set_logger, set_random_seed
+from utils.common import setup_logger
+from utils.test_utils import restore_experiment, load_mean_vectors, load_language_model, build_dataset
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -38,25 +36,6 @@ change_angle = [0.0034540758933871984, 0.007043459918349981, 0.00349362427368760
 sigma = 0.1
 thres = 0.03
 
-from model.pose_diffusion import PoseDiffusion
-
-
-def load_checkpoint_and_model(checkpoint_path, _device='cpu'):
-    print('loading checkpoint {}'.format(checkpoint_path))
-    checkpoint = torch.load(checkpoint_path, map_location=_device)
-    args = checkpoint['args']
-    epoch = checkpoint['epoch']
-    lang_model = checkpoint['lang_model']
-    speaker_model = checkpoint['speaker_model']
-    pose_dim = checkpoint['pose_dim']
-    print('epoch {}'.format(epoch))
-
-    print("init diffusion model")
-    diffusion = PoseDiffusion(args).to(_device)
-
-    diffusion.load_state_dict(checkpoint['state_dict'])
-
-    return args, diffusion, lang_model, speaker_model, pose_dim
 
 
 def generate_gestures(args, diffusion, lang_model, audio, words, pose_dim, audio_sr=16000,
@@ -421,48 +400,18 @@ def create_video_and_save(save_path, iter_idx, prefix, target, output, mean_data
 
 
 def main(mode, checkpoint_path, val_data_path):
-    args, diffusion, lang_model, speaker_model, pose_dim = load_checkpoint_and_model(
-        checkpoint_path, device)
-
-    # random seed
-    if args.random_seed >= 0:
-        set_random_seed(args.random_seed)
-
-    # set logger
-    set_logger(args.model_save_path, os.path.basename(__file__).replace('.py', '.log'))
-
-    logging.info("PyTorch version: {}".format(torch.__version__))
-    logging.info("CUDA version: {}".format(torch.version.cuda))
-    logging.info("{} GPUs, default {}".format(torch.cuda.device_count(), device))
-    logging.info(pprint.pformat(vars(args)))
-
-    # load mean vec
-    mean_pose = np.array(args.mean_pose).squeeze()
-    mean_dir_vec = np.array(args.mean_dir_vec).squeeze()
-
-    # load lang_model
-    vocab_cache_path = os.path.join('data/ted_dataset', 'vocab_cache.pkl')
-    with open(vocab_cache_path, 'rb') as f:
-        lang_model = pickle.load(f)
+    setup_logger()
+    args, diffusion, lang_model, speaker_model, pose_dim = restore_experiment(checkpoint_path, device)
+    mean_pose, mean_dir_vec = load_mean_vectors(args)
+    vocab_cache_path = os.path.join("data/ted_dataset", "vocab_cache.pkl")
+    lang_model = load_language_model(vocab_cache_path)
 
     collate_fn = default_collate_fn
-
-    def load_dataset(path):
-        dataset = SpeechMotionDataset(path,
-                                      n_poses=args.n_poses,
-                                      subdivision_stride=args.subdivision_stride,
-                                      pose_resampling_fps=args.motion_resampling_framerate,
-                                      speaker_model=speaker_model,
-                                      mean_pose=mean_pose,
-                                      mean_dir_vec=mean_dir_vec
-                                      )
-        print(len(dataset))
-        return dataset
 
     if mode == 'eval':
         eval_net_path = 'output/train_h36m_gesture_autoencoder/gesture_autoencoder_checkpoint_best.bin'
         embed_space_evaluator = EmbeddingSpaceEvaluator(args, eval_net_path, lang_model, device)
-        val_dataset = load_dataset(val_data_path)
+        val_dataset = build_dataset(val_data_path, args, speaker_model, mean_pose, mean_dir_vec)
         data_loader = DataLoader(dataset=val_dataset, batch_size=args.batch_size, collate_fn=collate_fn,
                                  shuffle=False, drop_last=True,
                                  num_workers=0,  # quick fix
@@ -472,7 +421,7 @@ def main(mode, checkpoint_path, val_data_path):
         evaluate_testset(data_loader, diffusion, embed_space_evaluator, args, pose_dim)
 
     elif mode == 'short':
-        val_dataset = load_dataset(val_data_path)
+        val_dataset = build_dataset(val_data_path, args, speaker_model, mean_pose, mean_dir_vec)
         data_loader = DataLoader(dataset=val_dataset, batch_size=32, collate_fn=collate_fn,
                                  shuffle=False, drop_last=True,
                                  num_workers=0,  # quick fix

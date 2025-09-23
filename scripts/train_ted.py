@@ -15,6 +15,7 @@ from train_eval.train_diffusion import train_iter_diffusion
 from utils.average_meter import AverageMeter
 from utils.vocab_utils import build_vocab
 import utils.train_utils
+from utils.common import set_random_seed, setup_logger
 
 matplotlib.use('Agg')  # we don't use interactive GUI
 [sys.path.append(i) for i in ['.', '..']]
@@ -43,7 +44,7 @@ def train_epochs(args, train_data_loader, lang_model, pose_dim, speaker_model=No
 
     diffusion_model = init_model(args, device)
 
-    optimizer = optim.Adam(diffusion_model.parameters(),lr=args.learning_rate, betas=(0.5, 0.999))
+    optimizer = optim.Adam(diffusion_model.parameters(), lr=args.learning_rate, betas=(0.5, 0.999))
 
     # training
     global_iter = 0
@@ -51,7 +52,6 @@ def train_epochs(args, train_data_loader, lang_model, pose_dim, speaker_model=No
 
         # save model
         if (epoch % save_model_epoch_interval == 0 and epoch > 0) or epoch == args.epochs - 1:
-
             state_dict = diffusion_model.state_dict()
 
             save_name = '{}/{}_checkpoint_{:03d}.bin'.format(args.model_save_path, args.name, epoch)
@@ -74,8 +74,8 @@ def train_epochs(args, train_data_loader, lang_model, pose_dim, speaker_model=No
             # train
             loss = []
             if args.model == 'pose_diffusion':
-                loss = train_iter_diffusion(args, in_audio, target_vec, 
-                                      diffusion_model, optimizer)
+                loss = train_iter_diffusion(args, in_audio, target_vec,
+                                            diffusion_model, optimizer)
 
             # loss values
             for loss_meter in loss_meters:
@@ -91,7 +91,7 @@ def train_epochs(args, train_data_loader, lang_model, pose_dim, speaker_model=No
             if (iter_idx + 1) % print_interval == 0:
                 print_summary = 'EP {} ({:3d}) | {:>8s}, {:.0f} samples/s | '.format(
                     epoch, iter_idx + 1, utils.train_utils.time_since(start),
-                    batch_size / (time.time() - iter_start_time))
+                           batch_size / (time.time() - iter_start_time))
                 for loss_meter in loss_meters:
                     if loss_meter.count > 0:
                         print_summary += '{}: {:.3f}, '.format(loss_meter.name, loss_meter.avg)
@@ -104,14 +104,11 @@ def train_epochs(args, train_data_loader, lang_model, pose_dim, speaker_model=No
 
 
 def main(config):
+    setup_logger()
     args = config['args']
-
-    # random seed
-    if args.random_seed >= 0:
-        utils.train_utils.set_random_seed(args.random_seed)
-
-    # set logger
-    utils.train_utils.set_logger(args.model_save_path, os.path.basename(__file__).replace('.py', '.log'))
+    # Reproducibility
+    if getattr(args, "random_seed", -1) >= 0:
+        set_random_seed(args.random_seed)
 
     logging.info("PyTorch version: {}".format(torch.__version__))
     logging.info("CUDA version: {}".format(torch.version.cuda))

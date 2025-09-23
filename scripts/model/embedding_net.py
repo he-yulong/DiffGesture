@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from model.multimodal_context_net import WavEncoder, TextEncoderTCN
+from scripts.model.multimodal_context_net import WavEncoder, TextEncoderTCN
 
 
 def reparameterize(mu, logvar):

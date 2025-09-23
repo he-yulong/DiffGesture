@@ -48,7 +48,7 @@ class DataPreprocessor:
 
         # sampling and normalization
         cursor = src_txn.cursor()
-        for key, value in tqdm(cursor, total=n_entries, desc="Processing videos"):
+        for key, value in tqdm(cursor, total=n_entries, desc="Processing videos in DataPreprocessor"):
             video = pickle.loads(value)
             vid = video['vid']
             clips = video['clips']
