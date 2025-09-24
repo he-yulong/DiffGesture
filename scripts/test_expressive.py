@@ -12,7 +12,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 def main(mode, checkpoint_path):
-    setup_logger()
+    setup_logger(__file__)
     args, diffusion, lang_model, speaker_model, pose_dim = restore_experiment(checkpoint_path, device)
     mean_pose, mean_dir_vec = load_mean_vectors(args)
     vocab_cache_path = os.path.join("data/ted_expressive_dataset", "vocab_cache.pkl")
@@ -28,5 +28,7 @@ def main(mode, checkpoint_path):
 if __name__ == '__main__':
     mode = sys.argv[1]
     assert mode in ["eval", "short", "long"]
-    ckpt_path = 'output/train_diffusion_expressive/pose_diffusion_checkpoint_499.bin'
+    # ckpt_path = 'output/train_diffusion_expressive/pose_diffusion_checkpoint_499.bin'
+    'D:\dev\A2P\DiffGesture\output\\\\checkpoints'
+    ckpt_path = 'output/train_diffusion_expressive/baseline/version_4/checkpoints/val-loss-083-0.0281-temp.ckpt'
     main(mode, ckpt_path)

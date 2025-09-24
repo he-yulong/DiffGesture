@@ -59,8 +59,8 @@ def set_logger(log_path=None, log_filename='log'):
     logging.getLogger("matplotlib").setLevel(logging.WARNING)
 
 
-def setup_logger(log_dir='logs'):
+def setup_logger(name, log_dir='logs'):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M")
-    script_name = os.path.basename(__file__).replace(".py", "")
+    script_name = os.path.basename(name).replace(".py", "")
     log_filename = f"{script_name}_{timestamp}.log"
     set_logger(log_dir, log_filename)

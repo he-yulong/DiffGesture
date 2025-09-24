@@ -103,7 +103,10 @@ def restore_experiment(checkpoint_path, device="cpu", resume_training=False, man
     epoch = checkpoint.get("epoch")
     lang_model = checkpoint.get("lang_model")
     speaker_model = checkpoint.get("speaker_model")
-    pose_dim = checkpoint.get("pose_dim")
+    # Get pose_dim either from checkpoint or from args (lightning-fix)
+    pose_dim = checkpoint.get("pose_dim", None)
+    if pose_dim is None and hasattr(args, "pose_dim"):
+        pose_dim = args.pose_dim
 
     # Reproducibility
     if getattr(args, "random_seed", -1) >= 0 and resume_training:
@@ -161,16 +164,34 @@ def _log_environment_info(device, args, checkpoint_path, epoch):
 
 def _validate_checkpoint(checkpoint):
     """Validate checkpoint structure and extract required fields."""
-    args = checkpoint.get("args")
-    state_dict = checkpoint.get("state_dict")
-    if args is None or state_dict is None:
-        raise ValueError("Checkpoint is missing required keys: 'args' or 'state_dict'")
-    return args, state_dict
+    if "state_dict" not in checkpoint:
+        raise ValueError("Checkpoint missing 'state_dict'")
+
+        # Lightning stores args under 'hyper_parameters'
+    if "args" in checkpoint:
+        args = checkpoint["args"]
+    elif "hyper_parameters" in checkpoint:
+        args = checkpoint["hyper_parameters"]["args"]  # adapt if you saved them there
+    else:
+        raise ValueError("Checkpoint missing 'args' (check hyper_parameters?)")
+
+    return args, checkpoint["state_dict"]
 
 
 def _initialize_model(args, state_dict, device):
     """Initialize PoseDiffusion model and load weights."""
+    """Initialize PoseDiffusion model and load weights."""
+
+    # Fix Lightning prefix "model."
+    new_state_dict = {}
+    for k, v in state_dict.items():
+        if k.startswith("model."):
+            new_key = k[len("model."):]
+        else:
+            new_key = k
+        new_state_dict[new_key] = v
+
     model = PoseDiffusion(args).to(device)
-    model.load_state_dict(state_dict)
+    model.load_state_dict(new_state_dict, strict=True)  # strict=True ensures nothing is missed
     logging.info("PoseDiffusion model initialized and weights loaded.")
     return model

@@ -1,10 +1,11 @@
+# DiffGesture/scripts/parse_args_diffusion.py
 import configargparse
 
 
 def str2bool(v):
     """ from https://stackoverflow.com/a/43357954/1361529 """
     if isinstance(v, bool):
-       return v
+        return v
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
         return True
     elif v.lower() in ('no', 'false', 'f', 'n', '0'):
@@ -24,7 +25,7 @@ def parse_args():
     parser.add("--pose_representation", type=str, default='3d_vec')
     parser.add("--mean_dir_vec", action="append", type=float, nargs='*')
     parser.add("--mean_pose", action="append", type=float, nargs='*')
-    parser.add("--random_seed", type=int, default=-1)
+    parser.add("--random_seed", type=int, default=123)
     parser.add("--save_result_video", type=str2bool, default=True)
 
     # word embedding
@@ -60,6 +61,10 @@ def parse_args():
 
     # eval
     parser.add("--eval_net_path", type=str, default='')
+
+    # training logs
+    parser.add("--log_name", type=str, default="baseline",
+               help="Name of the logging directory (e.g., 'baseline')")
 
     args = parser.parse_args()
     return args

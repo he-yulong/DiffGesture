@@ -1,3 +1,5 @@
+# DiffGesture/scripts/utils/data_utils_expressive.py
+# import numpy as np
 import logging
 import os
 import pickle
@@ -10,9 +12,9 @@ from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
 from torch.utils.data.dataloader import default_collate
 
-import utils.data_utils_expressive
-from model.vocab import Vocab
-from data_loader.data_preprocessor_expressive import DataPreprocessor
+import scripts.utils.data_utils_expressive
+from scripts.model.vocab import Vocab
+from scripts.data_loader.data_preprocessor_expressive import DataPreprocessor
 import copy
 
 
@@ -63,7 +65,7 @@ class SpeechMotionDataset(Dataset):
         self.remove_word_timing = remove_word_timing
 
         self.expected_audio_length = int(round(n_poses / pose_resampling_fps * 16000))
-        self.expected_spectrogram_length = utils.data_utils_expressive.calc_spectrogram_length_from_motion_length(
+        self.expected_spectrogram_length = scripts.utils.data_utils_expressive.calc_spectrogram_length_from_motion_length(
             n_poses, pose_resampling_fps)
 
         self.lang_model = None
@@ -124,7 +126,7 @@ class SpeechMotionDataset(Dataset):
                         n_words += 1
                 space = int(n_frames / (n_words + 1))
                 for i in range(n_words):
-                    idx = (i+1) * space
+                    idx = (i + 1) * space
                     extended_word_indices[idx] = lang.get_word_index(words[i][0])
             else:
                 prev_idx = 0
@@ -150,7 +152,7 @@ class SpeechMotionDataset(Dataset):
 
         if do_clipping:
             sample_end_time = aux_info['start_time'] + duration * self.n_poses / vec_seq.shape[0]
-            audio = utils.data_utils_expressive.make_audio_fixed_length(audio, self.expected_audio_length)
+            audio = scripts.utils.data_utils_expressive.make_audio_fixed_length(audio, self.expected_audio_length)
             spectrogram = spectrogram[:, 0:self.expected_spectrogram_length]
             vec_seq = vec_seq[0:self.n_poses]
             pose_seq = pose_seq[0:self.n_poses]

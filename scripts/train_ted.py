@@ -104,7 +104,7 @@ def train_epochs(args, train_data_loader, lang_model, pose_dim, speaker_model=No
 
 
 def main(config):
-    setup_logger()
+    setup_logger(__file__)
     args = config['args']
     # Reproducibility
     if getattr(args, "random_seed", -1) >= 0:

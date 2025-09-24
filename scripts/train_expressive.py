@@ -31,6 +31,28 @@ def init_model(args, _device):
     return diffusion
 
 
+def _maybe_save_checkpoint(epoch, args, diffusion_model, lang_model, speaker_model, pose_dim, interval=50):
+    """
+    Save model checkpoint periodically or at the final epoch.
+    """
+    should_save = (epoch % interval == 0 and epoch > 0) or (epoch == args.epochs - 1)
+    if not should_save:
+        return
+
+    state_dict = diffusion_model.state_dict()
+    save_name = f"{args.model_save_path}/{args.name}_checkpoint_{epoch:03d}.bin"
+
+    utils.train_utils.save_checkpoint({
+        "args": args,
+        "epoch": epoch,
+        "lang_model": lang_model,
+        "speaker_model": speaker_model,
+        "pose_dim": pose_dim,
+        "state_dict": state_dict,
+    }, save_name)
+    logging.info(f"Saved checkpoint: {save_name}")
+
+
 def train_epochs(args, train_data_loader, lang_model, pose_dim, speaker_model=None):
     start = time.time()
     loss_meters = [AverageMeter('loss'), AverageMeter('var_loss'), AverageMeter('gen'), AverageMeter('dis'),
@@ -50,18 +72,8 @@ def train_epochs(args, train_data_loader, lang_model, pose_dim, speaker_model=No
     # training
     global_iter = 0
     for epoch in range(args.epochs):
-
-        # save model
-        if (epoch % save_model_epoch_interval == 0 and epoch > 0) or epoch == args.epochs - 1:
-            state_dict = diffusion_model.state_dict()
-
-            save_name = '{}/{}_checkpoint_{:03d}.bin'.format(args.model_save_path, args.name, epoch)
-
-            utils.train_utils.save_checkpoint({
-                'args': args, 'epoch': epoch, 'lang_model': lang_model, 'speaker_model': speaker_model,
-                'pose_dim': pose_dim, 'state_dict': state_dict,
-            }, save_name)
-
+        _maybe_save_checkpoint(epoch, args, diffusion_model, lang_model,
+                               speaker_model, pose_dim, save_model_epoch_interval)
         # train iter
         iter_start_time = time.time()
         for iter_idx, data in enumerate(train_data_loader, 0):
@@ -106,7 +118,7 @@ def train_epochs(args, train_data_loader, lang_model, pose_dim, speaker_model=No
 
 
 def main(config):
-    setup_logger()
+    setup_logger(__file__)
     args = config['args']
 
     # Reproducibility

@@ -111,8 +111,6 @@ class EvalPipeline(BasePipeline):
         """Iterate over batches and update evaluation metrics."""
         with torch.no_grad():
             for iter_idx, data in enumerate(test_data_loader, 0):
-                if iter_idx == 2:  # early stop (debug only?)
-                    break
                 logging.info(f"testing {iter_idx}/{len(test_data_loader)}")
 
                 in_text, in_text_padded, in_audio, in_spec, target, pre_seq, batch_size = \

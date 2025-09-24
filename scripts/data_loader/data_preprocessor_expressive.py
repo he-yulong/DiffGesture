@@ -8,10 +8,9 @@ import math
 import numpy as np
 import pickle
 from tqdm import tqdm
-from sklearn.preprocessing import normalize
 
-import utils.data_utils_expressive
-from data_loader.motion_preprocessor_expressive import MotionPreprocessor
+import scripts.utils.data_utils_expressive
+from scripts.data_loader.motion_preprocessor_expressive import MotionPreprocessor
 
 
 class DataPreprocessor:
@@ -28,7 +27,8 @@ class DataPreprocessor:
         with self.src_lmdb_env.begin() as txn:
             self.n_videos = txn.stat()['entries']
 
-        self.spectrogram_sample_length = utils.data_utils_expressive.calc_spectrogram_length_from_motion_length(self.n_poses, self.skeleton_resampling_fps)
+        self.spectrogram_sample_length = scripts.utils.data_utils_expressive.calc_spectrogram_length_from_motion_length(
+            self.n_poses, self.skeleton_resampling_fps)
         self.audio_sample_length = int(self.n_poses / self.skeleton_resampling_fps * 16000)
 
         # create db for samples
@@ -83,7 +83,8 @@ class DataPreprocessor:
         n_filtered_out = defaultdict(int)
 
         # skeleton resampling
-        clip_skeleton = utils.data_utils_expressive.resample_pose_seq(clip_skeleton, clip_e_t - clip_s_t, self.skeleton_resampling_fps)
+        clip_skeleton = scripts.utils.data_utils_expressive.resample_pose_seq(clip_skeleton, clip_e_t - clip_s_t,
+                                                                              self.skeleton_resampling_fps)
 
         # divide
         aux_info = []
@@ -95,7 +96,8 @@ class DataPreprocessor:
         num_subdivision = math.floor(
             (len(clip_skeleton) - self.n_poses)
             / self.subdivision_stride) + 1  # floor((K - (N+M)) / S) + 1
-        expected_audio_length = utils.data_utils_expressive.calc_spectrogram_length_from_motion_length(len(clip_skeleton), self.skeleton_resampling_fps)
+        expected_audio_length = scripts.utils.data_utils_expressive.calc_spectrogram_length_from_motion_length(
+            len(clip_skeleton), self.skeleton_resampling_fps)
         assert abs(expected_audio_length - clip_audio.shape[1]) <= 5, 'audio and skeleton lengths are different'
 
         for i in range(num_subdivision):
@@ -160,7 +162,7 @@ class DataPreprocessor:
                                                                  aux_info):
                     # preprocessing for poses
                     poses = np.asarray(poses)
-                    dir_vec = utils.data_utils_expressive.convert_pose_seq_to_dir_vec(poses)
+                    dir_vec = scripts.utils.data_utils_expressive.convert_pose_seq_to_dir_vec(poses)
                     normalized_dir_vec = self.normalize_dir_vec(dir_vec, self.mean_dir_vec)
 
                     # save

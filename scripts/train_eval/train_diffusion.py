@@ -1,3 +1,4 @@
+# Diffgesture/scripts/train_eval/train_diffusion.py
 import torch
 from torch.nn.utils import clip_grad_norm_
 

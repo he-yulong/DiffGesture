@@ -400,7 +400,7 @@ def create_video_and_save(save_path, iter_idx, prefix, target, output, mean_data
 
 
 def main(mode, checkpoint_path, val_data_path):
-    setup_logger()
+    setup_logger(__file__)
     args, diffusion, lang_model, speaker_model, pose_dim = restore_experiment(checkpoint_path, device)
     mean_pose, mean_dir_vec = load_mean_vectors(args)
     vocab_cache_path = os.path.join("data/ted_dataset", "vocab_cache.pkl")
