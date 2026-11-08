@@ -1,3 +1,4 @@
+# DiffGesture/scripts/test_expressive.py
 import os
 import sys
 import torch
@@ -8,7 +9,6 @@ from utils.test_utils import restore_experiment, load_mean_vectors, load_languag
 from scripts.utils.pipelines.pipeline_factory import PipelineFactory
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
 
 
 def main(mode, checkpoint_path):
@@ -28,7 +28,6 @@ def main(mode, checkpoint_path):
 if __name__ == '__main__':
     mode = sys.argv[1]
     assert mode in ["eval", "short", "long"]
-    # ckpt_path = 'output/train_diffusion_expressive/pose_diffusion_checkpoint_499.bin'
-    'D:\dev\A2P\DiffGesture\output\\\\checkpoints'
-    ckpt_path = 'output/train_diffusion_expressive/baseline/version_4/checkpoints/val-loss-083-0.0281-temp.ckpt'
+    ckpt_path = 'output/train_diffusion_expressive/pose_diffusion_checkpoint_499.bin'
+    # ckpt_path = 'output/train_diffusion_expressive/baseline/version_4/checkpoints/val-loss-083-0.0281.ckpt'
     main(mode, ckpt_path)

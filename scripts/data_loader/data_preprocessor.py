@@ -7,8 +7,8 @@ import numpy as np
 import pickle
 from tqdm import tqdm
 
-import utils.data_utils
-from data_loader.motion_preprocessor import MotionPreprocessor
+import scripts.utils.data_utils
+from scripts.data_loader.motion_preprocessor import MotionPreprocessor
 
 
 class DataPreprocessor:

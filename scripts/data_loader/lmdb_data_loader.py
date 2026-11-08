@@ -10,9 +10,9 @@ from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
 from torch.utils.data.dataloader import default_collate
 
-import utils.data_utils
-from model.vocab import Vocab
-from data_loader.data_preprocessor import DataPreprocessor
+import scripts.utils.data_utils
+from scripts.model.vocab import Vocab
+from scripts.data_loader.data_preprocessor import DataPreprocessor
 import copy
 
 

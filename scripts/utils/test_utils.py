@@ -100,6 +100,19 @@ def restore_experiment(checkpoint_path, device="cpu", resume_training=False, man
 
     # Extract fields
     args, state_dict = _validate_checkpoint(checkpoint)
+    # --- begin: backfill missing attributes for inference ---
+    # Choose v2 first (you have a 'diffusion_net_v2' folder in outputs); fallback handled below.
+    if not hasattr(args, "log_name"):
+        setattr(args, "log_name", "baseline")
+    if not hasattr(args, "input_context"):
+        setattr(args, "input_context", "audio")
+    if not hasattr(args, "classifier_free"):
+        setattr(args, "classifier_free", False)
+    if not hasattr(args, "null_cond_prob"):
+        setattr(args, "null_cond_prob", 0.0)
+    # pose_dim is already read below; keep it.
+    # --- end: backfill ---
+
     epoch = checkpoint.get("epoch")
     lang_model = checkpoint.get("lang_model")
     speaker_model = checkpoint.get("speaker_model")

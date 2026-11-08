@@ -64,7 +64,7 @@ def parse_args():
 
     # training logs
     parser.add("--log_name", type=str, default="baseline",
-               help="Name of the logging directory (e.g., 'baseline')")
+               help="Name of the logging directory (e.g., 'baseline')")  # TODO: find a better name
 
     args = parser.parse_args()
     return args

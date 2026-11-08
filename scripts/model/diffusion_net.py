@@ -58,7 +58,7 @@ class DiffusionNet(Module):
                 e_theta = self.net(x_t, beta=beta, context=context)
 
             t0 = 25
-            if t < t0 and t > 1:
+            if t0 > t > 1:
                 sigma_a = 1/t0/t0*(t-t0)*(t-t0)
                 z0 = sigma_a * torch.randn_like(x_T[:,0,:].unsqueeze(1))
 

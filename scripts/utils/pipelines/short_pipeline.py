@@ -61,14 +61,17 @@ class ShortPipeline(BasePipeline):
 
     def _generate_output(self, in_audio, target_dir_vec):
         """Run diffusion model to generate gesture outputs."""
-        pre_seq = target_dir_vec.new_zeros(
-            (target_dir_vec.shape[0], target_dir_vec.shape[1], target_dir_vec.shape[2] + 1)
-        )
-        pre_seq[:, 0:self.args.n_pre_poses, :-1] = target_dir_vec[:, 0:self.args.n_pre_poses]
-        pre_seq[:, 0:self.args.n_pre_poses, -1] = 1  # indicating bit for constraints
+        B, T, D = target_dir_vec.shape
+        # +1 for the constraint flag.
+        pre_seq = torch.zeros((B, T, D + 1), device=target_dir_vec.device, dtype=target_dir_vec.dtype)
+
+        # copy first n_pre_poses ground-truth
+        n = self.args.n_pre_poses
+        pre_seq[:, :n, :-1] = target_dir_vec[:, :n]
+        pre_seq[:, :n, -1] = 1.0
 
         assert self.args.model == "pose_diffusion"
-        return self.diffusion.sample(self.pose_dim, pre_seq, in_audio)
+        return self.diffusion.sample(D, pre_seq, in_audio)
 
     def _postprocess_results(self, in_audio, target_dir_vec, out_dir_vec):
         """Convert tensors to numpy arrays."""

@@ -1,8 +1,8 @@
 # Diffgesture/scripts/model/pose_diffusion.py
 import torch
 import torch.nn as nn
+import logging
 
-from .diffusion_net import *
 from .diffusion_util import *
 
 
@@ -27,21 +27,40 @@ class PoseDiffusion(nn.Module):
             self.null_cond_prob = args.null_cond_prob
             self.null_cond_emb = nn.Parameter(torch.randn(1, self.in_size))
 
-        self.diffusion_net = DiffusionNet(
-            net=TransformerModel(num_pose=args.n_poses,
-                                 pose_dim=pose_dim,
-                                 embed_dim=pose_dim + 3 + self.in_size,
-                                 hidden_dim=diff_hidden_dim,
-                                 depth=block_depth // 2,
-                                 decoder_depth=block_depth // 2
-                                 ),
-            var_sched=VarianceSchedule(
-                num_steps=500,
-                beta_1=1e-4,
-                beta_T=0.02,
-                mode='linear'
+        if args.log_name == 'baseline':
+            from .diffusion_net import DiffusionNet
+            self.diffusion_net = DiffusionNet(
+                net=TransformerModel(num_pose=args.n_poses,
+                                     pose_dim=pose_dim,
+                                     embed_dim=pose_dim + 3 + self.in_size,
+                                     hidden_dim=diff_hidden_dim,
+                                     depth=block_depth // 2,
+                                     decoder_depth=block_depth // 2
+                                     ),
+                var_sched=VarianceSchedule(
+                    num_steps=500,
+                    beta_1=1e-4,
+                    beta_T=0.02,
+                    mode='linear'
+                )
             )
-        )
+        else:
+            from .diffusion_net_v2 import DiffusionNet
+            self.diffusion_net = DiffusionNet(
+                net=TransformerModel(num_pose=args.n_poses,
+                                     pose_dim=pose_dim,
+                                     embed_dim=pose_dim + 3 + self.in_size,
+                                     hidden_dim=diff_hidden_dim,
+                                     depth=block_depth // 2,
+                                     decoder_depth=block_depth // 2
+                                     ),
+                var_sched=VarianceSchedule(
+                    num_steps=500,
+                    beta_1=1e-4,
+                    beta_T=0.02,
+                    mode='linear'
+                )
+            )
 
     def get_loss(self, x, pre_seq, in_audio):
 
@@ -64,6 +83,15 @@ class PoseDiffusion(nn.Module):
 
         if self.input_context == 'audio':
             audio_feat_seq = self.audio_encoder(in_audio)
+            # 🔧 Force match along time dimension
+            T = pre_seq.shape[1]
+            if audio_feat_seq.shape[1] != T:
+                logging.warning(f"Audio feature length {audio_feat_seq.shape[1]} != target length {T}, interpolating.")
+                audio_feat_seq = torch.nn.functional.interpolate(
+                    audio_feat_seq.transpose(1, 2),  # (B, D, Ta)
+                    size=T,  # target length
+                    mode="linear", align_corners=False
+                ).transpose(1, 2)  # back to (B, T, D)
             in_data = torch.cat((pre_seq, audio_feat_seq), dim=2)
 
         if self.classifier_free:

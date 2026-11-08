@@ -2,6 +2,7 @@
 import torch
 import lightning as L
 from torch import optim
+from model.pose_diffusion import PoseDiffusion
 
 
 class DiffGestureModule(L.LightningModule):
@@ -15,19 +16,17 @@ class DiffGestureModule(L.LightningModule):
         self.speaker_model = speaker_model
         self.pose_dim = pose_dim
 
-        from model.pose_diffusion import PoseDiffusion
         self.model = PoseDiffusion(args)
 
     def forward(self, pre_seq, in_audio):
-        # used for validation/inference
+        # Forward pass for inference/sampling (not used in training loss computation)
         return self.model.sample(self.pose_dim, pre_seq, in_audio)
 
-    def _train_iter_diffusion(self, args, in_audio, target_poses, pose_diffusion):
+    def _train_iter_diffusion(self, args, in_audio, target_poses, pose_diffusion : PoseDiffusion):
         # make pre seq input
         pre_seq = target_poses.new_zeros((target_poses.shape[0], target_poses.shape[1], target_poses.shape[2] + 1))
         pre_seq[:, 0:args.n_pre_poses, :-1] = target_poses[:, 0:args.n_pre_poses]
         pre_seq[:, 0:args.n_pre_poses, -1] = 1  # indicating bit for constraints
-        pose_diffusion.train()
         loss = pose_diffusion.get_loss(target_poses, pre_seq, in_audio)
         return {"mse_loss": loss}
 
